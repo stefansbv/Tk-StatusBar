@@ -13,4 +13,8 @@ Revision history for Perl extension Tk::StatusBar.
 	- fixed bug associated with adding a progressbar with no
 	    -length specified
 	- created a valid test script
+	
+0.04  Wed Feb 04 20:21:22 2004
+	- customized mouse cursor based on OS (Win32 or other)
+	- improved window resize performance
 

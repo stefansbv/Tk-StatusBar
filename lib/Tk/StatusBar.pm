@@ -6,20 +6,19 @@ use strict;
 use base qw(Tk::Frame);
 
 use Tk::widgets qw(Frame Label ProgressBar);
-use Tk qw(Ev);
 use Carp;
 
 Construct Tk::Widget 'StatusBar';
 
 use vars qw($VERSION);
-$VERSION = 0.03;
+$VERSION = 0.04;
 
 
 sub ClassInit {
     my ($class, $mw) = @_;
     $class->SUPER::ClassInit($mw);
-    
-	my $ResizeButtonImage = << 'end-of-pixmap';
+
+    my $ResizeButtonImage = << 'end-of-pixmap';
 /* XPM */
 static char * Icon_xpm[] = {
 "13 14 3 1",
@@ -42,7 +41,7 @@ static char * Icon_xpm[] = {
 " AXX AXX AXX ",
 };
 end-of-pixmap
-    
+
     $mw->Pixmap('ResizeButtonImage', -data => $ResizeButtonImage);
 }
 
@@ -50,45 +49,43 @@ sub Populate {
     my ($self, $args) = @_;
 
     $self->SUPER::Populate($args);
-    $self->{MW}         = $self->parent;
 
     # add a spacer frame
     $self->Frame()->pack(-pady => 1);
-    
+
     # add the resize button
     $self->{ResizeButton} = $self->Label(
-    	-image 		=> 'ResizeButtonImage',
-    	-relief		=> 'flat',
-    	-cursor		=> 'bottom_right_corner',
-    )->pack(-side => 'right');
-    
-    $self->{ResizeButton}->bind("<ButtonPress-1>", [\&ResizeButton_Press, $self, Ev('X'), Ev('Y')]);
-    $self->{ResizeButton}->bind("<ButtonRelease-1>", [\&ResizeButton_Release, $self]);
+        -image      => 'ResizeButtonImage',
+        -relief     => 'flat',
+        -cursor     => ($^O =~ /^(MSWin32|DOS)$/ ? 'size_nw_se' : 'bottom_right_corner'),
+    )->pack(
+        -side   => 'right',
+        -anchor => 'se',
+    );
+
+    # bind events to the resize button
+    $self->{ResizeButton}->bind("<ButtonPress-1>", [\&_Mark, $self]);
+    $self->{ResizeButton}->bind('<B1-Motion>' => [\&_Resize, $self]);
 
     # hidden until show() is called
     $self->{HIDDEN} = 1;
 
-    # show the statusbar
+    # now show the statusbar
     $self->show();
 }
 
-sub ResizeButton_Press {
-	my ($self, $mark_x, $mark_y) = @_[1,2,3];
-	$self->{MW}->bind("<Motion>", [sub {
-		my ($self, $mouse_x, $mouse_y) = @_[1,2,3];
-		my ($w, $h, $x, $y) = split /[x+]/, $self->{MW}->geometry;
-		my $new_w = $w+$mouse_x-$mark_x;
-		my $new_h = $h+$mouse_y-$mark_y;
-		if ($new_h > 0 && $new_w > 0) {
-			$self->{MW}->geometry($new_w . 'x' . $new_h . '+' . $x . '+' . $y);
-		}
-		($mark_x, $mark_y) = ($mouse_x, $mouse_y);
-	}, $self, Ev('X'), Ev('Y')]);
+sub _Mark {
+    $_[1]->{markx} = $_[1]->pointerx;
+    $_[1]->{marky} = $_[1]->pointery;
 }
 
-sub ResizeButton_Release {
-	my $self = $_[1];
-	$self->{MW}->bind("<Motion>", undef);
+sub _Resize {
+    my $self = $_[1];
+    my ($w, $h) = split /[x+]/, $self->parent->geometry;
+    $w += ($self->pointerx - $self->{markx});
+    $h += ($self->pointery - $self->{marky});
+    $self->_Mark($self);
+    $self->parent->geometry($w . 'x' . $h)  if ($w > 0 && $h > 0);
 }
 
 sub addLabel {
@@ -153,7 +150,7 @@ sub addProgressBar {
         -troughcolor    => 'systembuttonface',
         %args,
     );
-    
+
     $n->configure(-length => $length)  if $length;
 
     if (! $length) {
@@ -199,7 +196,7 @@ sub show {
     }
 }
 
-    
+
 
 1;
 __END__
@@ -212,58 +209,58 @@ Tk::StatusBar - A statusbar widget for Perl/Tk
 
 =head1 SYNOPSIS
 
-	use Tk;
-	use Tk::StatusBar;
-	
-	my $mw = new MainWindow;
-	
-	my $Label1 = "Welcome to the statusbar";
-	my $Label2 = "On";
-	my $Progress = 0;
-	
-	$mw->Text()->pack(-expand => 1, -fill => 'both');
-	
-	$sb = $mw->StatusBar();
-	
-	$sb->addLabel(
-	    -relief         => 'flat',
-	    -textvariable   => \$Label1,
-	);
-	
-	$sb->addLabel(
-	    -text           => 'double-click that -->',
-	    -width          => '20',
-	    -anchor         => 'center',
-	);
-	
-	$sb->addLabel(
-	    -width          => 4,
-	    -anchor         => 'center',
-	    -textvariable   => \$Label2,
-	    -foreground     => 'blue',
-	    -command        => sub {$Label2 = $Label2 eq 'On' ? 'Off' : 'On';},
-	);
-	
-	$sb->addLabel(
-	    -width          => 5,
-	    -anchor         => 'center',
-	    -textvariable   => \$Progress,
-	);
-	
-	$p = $sb->addProgressBar(
-	    -length         => 60,
-	    -from           => 0,
-	    -to             => 100,
-	    -variable       => \$Progress,
-	);
-	
-	$mw->repeat('50', sub {
-	    if ($Label2 eq 'On') {
-	        $Progress = 0 if (++$Progress > 100);
-	    }
-	});
-	
-	MainLoop();
+    use Tk;
+    use Tk::StatusBar;
+
+    my $mw = new MainWindow;
+
+    my $Label1 = "Welcome to the statusbar";
+    my $Label2 = "On";
+    my $Progress = 0;
+
+    $mw->Text()->pack(-expand => 1, -fill => 'both');
+
+    $sb = $mw->StatusBar();
+
+    $sb->addLabel(
+        -relief         => 'flat',
+        -textvariable   => \$Label1,
+    );
+
+    $sb->addLabel(
+        -text           => 'double-click that -->',
+        -width          => '20',
+        -anchor         => 'center',
+    );
+
+    $sb->addLabel(
+        -width          => 4,
+        -anchor         => 'center',
+        -textvariable   => \$Label2,
+        -foreground     => 'blue',
+        -command        => sub {$Label2 = $Label2 eq 'On' ? 'Off' : 'On';},
+    );
+
+    $sb->addLabel(
+        -width          => 5,
+        -anchor         => 'center',
+        -textvariable   => \$Progress,
+    );
+
+    $p = $sb->addProgressBar(
+        -length         => 60,
+        -from           => 0,
+        -to             => 100,
+        -variable       => \$Progress,
+    );
+
+    $mw->repeat('50', sub {
+        if ($Label2 eq 'On') {
+            $Progress = 0 if (++$Progress > 100);
+        }
+    });
+
+    MainLoop();
 
 =head1 DESCRIPTION
 
@@ -314,7 +311,7 @@ B<w>, B<center>. For example, 'center' means display the information such that i
 in the label area. Default is 'w'.
 
 B<-command> --
-Specifies a perl/Tk callback to associate with the label area. 
+Specifies a perl/Tk callback to associate with the label area.
 
 B<-event> --
 The event associated with the -command.  Any valid event pattern defined in the Tk/bind
@@ -372,14 +369,14 @@ Shows the statusbar if previously hidden.
 
 =head1 INSTALLATION
 
-	perl Makefile.PL
-	make
-	make install
-	
+    perl Makefile.PL
+    make
+    make install
+
 or
 
-	Just put the StatusBar.pm file somewhere where Perl can find it.
-	The StatusBar is written in pure perl.
+    Just put the StatusBar.pm file somewhere where Perl can find it.
+    The StatusBar is written in pure perl.
 
 =head1 AUTHOR
 
@@ -395,3 +392,4 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
