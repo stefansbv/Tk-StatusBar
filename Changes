@@ -7,4 +7,10 @@ Revision history for Perl extension Tk::StatusBar.
 0.02  Mon Feb 02 18:30:45 2004
 	- added a window resize button
 	- improved documentation
+	
+0.03  Tue Feb 03 20:37:00 2004
+	- improved look of the window-resize button's diag lines
+	- fixed bug associated with adding a progressbar with no
+	    -length specified
+	- created a valid test script
 

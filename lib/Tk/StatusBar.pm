@@ -12,7 +12,7 @@ use Carp;
 Construct Tk::Widget 'StatusBar';
 
 use vars qw($VERSION);
-$VERSION = 0.02;
+$VERSION = 0.03;
 
 
 sub ClassInit {
@@ -24,22 +24,22 @@ sub ClassInit {
 static char * Icon_xpm[] = {
 "13 14 3 1",
 "    c none",
-"X   c #777777",
-"A   c #BBBBBB",
+"X   c #888888",
+"A   c #FFFFFF",
 "             ",
-"           A ",
-"          AA ",
-"         AAX ",
-"        AAX  ",
-"       AAX A ",
-"      AAX AA ",
-"     AAX AAX ",
-"    AAX AAX  ",
-"   AAX AAX A ",
-"  AAX AAX AA ",
-" AAX AAX AAX ",
-"AAX AAX AAX  ",
 "             ",
+"            A",
+"           AX",
+"          AXX",
+"         AXX ",
+"        AXX A",
+"       AXX AX",
+"      AXX AXX",
+"     AXX AXX ",
+"    AXX AXX A",
+"   AXX AXX AX",
+"  AXX AXX AXX",
+" AXX AXX AXX ",
 };
 end-of-pixmap
     
@@ -149,11 +149,12 @@ sub addProgressBar {
 
     my $n = $self->ProgressBar(
         -borderwidth    => $borderwidth,
-        -length         => $length,
         -width          => 17,
         -troughcolor    => 'systembuttonface',
         %args,
     );
+    
+    $n->configure(-length => $length)  if $length;
 
     if (! $length) {
         $n->pack(
