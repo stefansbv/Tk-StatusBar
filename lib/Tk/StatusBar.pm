@@ -1,21 +1,49 @@
 package Tk::StatusBar;
 
+use warnings;
 use strict;
-use Tk::Frame;
 
 use base qw(Tk::Frame);
-use Tk::widgets qw(Frame Label ProgressBar);
 
+use Tk::widgets qw(Frame Label ProgressBar);
+use Tk qw(Ev);
 use Carp;
 
 Construct Tk::Widget 'StatusBar';
 
 use vars qw($VERSION);
-$VERSION = 0.01;
+$VERSION = 0.02;
+
 
 sub ClassInit {
     my ($class, $mw) = @_;
     $class->SUPER::ClassInit($mw);
+    
+	my $ResizeButtonImage = << 'end-of-pixmap';
+/* XPM */
+static char * Icon_xpm[] = {
+"13 14 3 1",
+"    c none",
+"X   c #777777",
+"A   c #BBBBBB",
+"             ",
+"           A ",
+"          AA ",
+"         AAX ",
+"        AAX  ",
+"       AAX A ",
+"      AAX AA ",
+"     AAX AAX ",
+"    AAX AAX  ",
+"   AAX AAX A ",
+"  AAX AAX AA ",
+" AAX AAX AAX ",
+"AAX AAX AAX  ",
+"             ",
+};
+end-of-pixmap
+    
+    $mw->Pixmap('ResizeButtonImage', -data => $ResizeButtonImage);
 }
 
 sub Populate {
@@ -23,10 +51,19 @@ sub Populate {
 
     $self->SUPER::Populate($args);
     $self->{MW}         = $self->parent;
-    $self->{SLOTQTY}    = exists $args->{-slotqty} ? delete $args->{-slotqty} : 1;
 
     # add a spacer frame
     $self->Frame()->pack(-pady => 1);
+    
+    # add the resize button
+    $self->{ResizeButton} = $self->Label(
+    	-image 		=> 'ResizeButtonImage',
+    	-relief		=> 'flat',
+    	-cursor		=> 'bottom_right_corner',
+    )->pack(-side => 'right');
+    
+    $self->{ResizeButton}->bind("<ButtonPress-1>", [\&ResizeButton_Press, $self, Ev('X'), Ev('Y')]);
+    $self->{ResizeButton}->bind("<ButtonRelease-1>", [\&ResizeButton_Release, $self]);
 
     # hidden until show() is called
     $self->{HIDDEN} = 1;
@@ -35,9 +72,27 @@ sub Populate {
     $self->show();
 }
 
+sub ResizeButton_Press {
+	my ($self, $mark_x, $mark_y) = @_[1,2,3];
+	$self->{MW}->bind("<Motion>", [sub {
+		my ($self, $mouse_x, $mouse_y) = @_[1,2,3];
+		my ($w, $h, $x, $y) = split /[x+]/, $self->{MW}->geometry;
+		my $new_w = $w+$mouse_x-$mark_x;
+		my $new_h = $h+$mouse_y-$mark_y;
+		if ($new_h > 0 && $new_w > 0) {
+			$self->{MW}->geometry($new_w . 'x' . $new_h . '+' . $x . '+' . $y);
+		}
+		($mark_x, $mark_y) = ($mouse_x, $mouse_y);
+	}, $self, Ev('X'), Ev('Y')]);
+}
+
+sub ResizeButton_Release {
+	my $self = $_[1];
+	$self->{MW}->bind("<Motion>", undef);
+}
+
 sub addLabel {
-    my $self = shift;
-    my %args = @_;
+    my ($self, %args) = @_;
 
     my $width           = delete $args{-width};
     my $side            = delete $args{-side}           || 'left';
@@ -84,8 +139,7 @@ sub addLabel {
 }
 
 sub addProgressBar {
-    my $self = shift;
-    my %args = @_;
+    my ($self, %args) = @_;
 
     my $length          = $args{-length};
     my $borderwidth     = delete $args{-borderwidth}        || 1;
@@ -129,7 +183,6 @@ sub hide {
 
 sub show {
     my $self = shift;
-
     if ($self->{HIDDEN}) {
         my %args = (
             -side       => 'bottom',
@@ -144,6 +197,8 @@ sub show {
         $self->{HIDDEN} = 0;
     }
 }
+
+    
 
 1;
 __END__
@@ -160,30 +215,29 @@ Tk::StatusBar - A statusbar widget for Perl/Tk
 	use Tk::StatusBar;
 	
 	my $mw = new MainWindow;
-	$mw->geometry("640x480");
 	
 	my $Label1 = "Welcome to the statusbar";
 	my $Label2 = "On";
 	my $Progress = 0;
 	
-	$mw->Entry()->pack(-expand => 1, -fill => 'both');
+	$mw->Text()->pack(-expand => 1, -fill => 'both');
 	
 	$sb = $mw->StatusBar();
 	
 	$sb->addLabel(
 	    -relief         => 'flat',
-	    -textvariable   => \$Label1
+	    -textvariable   => \$Label1,
 	);
 	
 	$sb->addLabel(
 	    -text           => 'double-click that -->',
 	    -width          => '20',
-	    -anchor         => 'c',
+	    -anchor         => 'center',
 	);
 	
 	$sb->addLabel(
 	    -width          => 4,
-	    -anchor         => 'c',
+	    -anchor         => 'center',
 	    -textvariable   => \$Label2,
 	    -foreground     => 'blue',
 	    -command        => sub {$Label2 = $Label2 eq 'On' ? 'Off' : 'On';},
@@ -191,7 +245,7 @@ Tk::StatusBar - A statusbar widget for Perl/Tk
 	
 	$sb->addLabel(
 	    -width          => 5,
-	    -anchor         => 'c',
+	    -anchor         => 'center',
 	    -textvariable   => \$Progress,
 	);
 	
@@ -219,16 +273,18 @@ statusbar can be hidden or displayed as needed.
 
 =head1 WIDGET-SPECIFIC OPTIONS
 
-The StatusBar widget can take all of the same arguements allowable by a Tk::Frame.
+There are currently no widget-specific options.  The StatusBar widget will accept
+all of the same options allowable by a Tk-Frame.
 
 =head1 WIDGET METHODS
 
-The following methods are used to create widgets that are placed inside
-the StatusBar. Widgets are ordered in the same order they are created, left to right.
-
 =over 4
 
-=item I<$sb>-E<gt>B<addLabel>(I<options>)	
+=item I<$sb>-E<gt>B<addLabel>(I<options>)
+
+This method is used to add a label section to the status bar widget, and can therefore
+accept all the same arguments that a Tk-Label can accept.  Some widget-specific options
+and options of interest are listed below.
 
 B<-width> --
 Sets a fixed width for the label.  If no width is specifid, the label will expand
@@ -266,6 +322,10 @@ value is ignored.  Default is '<Double-Button-1>'.
 
 =item I<$sb>-E<gt>B<addProgressBar>(I<options>)
 
+This method is used to add a progress bar section to the status bar widget, and can
+therefore accept all the same arguments that a Tk-Progressbar can accept.  Some
+widget-specific options and options of interest are listed below.
+
 B<-length> --
 Specifies the desired narrow dimension of the ProgressBar in screen units (i.e. any of
 the forms acceptable to Tk_GetPixels).  If specified, sets a fixed length for the progress
@@ -289,11 +349,11 @@ B<-side> --
 Be default, all widgets are packed from the left.  If you would like to alter
 the packing order, you can choose to pack an item on the right.  Default is 'left'.
 
-=item I<$sb>-E<gt>B<Hide>()
+=item I<$sb>-E<gt>B<hide>()
 
 Hides the statusbar.
 
-=item I<$sb>-E<gt>B<Show>()
+=item I<$sb>-E<gt>B<show>()
 
 Shows the statusbar if previously hidden.
 
@@ -303,9 +363,9 @@ Shows the statusbar if previously hidden.
 
 =over 4
 
-=item o Allow icons to be embedded in the status bar.
+    - Allow icons to be embedded in the status bar.
 
-=item o Improvement this documentation.
+    - Improve this documentation.
 
 =back
 
@@ -314,10 +374,15 @@ Shows the statusbar if previously hidden.
 	perl Makefile.PL
 	make
 	make install
+	
+or
+
+	Just put the StatusBar.pm file somewhere where Perl can find it.
+	The StatusBar is written in pure perl.
 
 =head1 AUTHOR
 
-Shawn Zabel -- zabel@higherprime.com
+Shawn Zabel -- zabel@cpan.org
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -4,3 +4,7 @@ Revision history for Perl extension Tk::StatusBar.
 	- original version; created by h2xs 1.23 with options
 		-X -n Tk::StatusBar
 
+0.02  Mon Feb 02 18:30:45 2004
+	- added a window resize button
+	- improved documentation
+
