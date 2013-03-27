@@ -147,7 +147,6 @@ sub addProgressBar {
     my $n = $self->ProgressBar(
         -borderwidth    => $borderwidth,
         -width          => 17,
-        -troughcolor    => 'systembuttonface',
         %args,
     );
 
